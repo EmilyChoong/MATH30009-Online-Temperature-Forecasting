@@ -1,0 +1,14 @@
+# Whitelist: ignore everything, then allow only the shared files
+/*
+!/.gitignore
+!/README.md
+!/*.py
+!/01_check.ipynb
+!/algorithms/
+!/outputs/
+!/bristol_data.csv/
+
+# never commit caches
+__pycache__/
+*.pyc
+.DS_Store
