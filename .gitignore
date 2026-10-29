@@ -6,7 +6,8 @@
 !/01_check.ipynb
 !/algorithms/
 !/outputs/
-!/bristol_data.csv/
+!/bristol_data.csv
+!/figures/
 
 # never commit caches
 __pycache__/
