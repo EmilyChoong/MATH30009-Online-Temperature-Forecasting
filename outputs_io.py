@@ -43,7 +43,8 @@ def save_results(new):
 
 
 def load_results():
-    return pd.read_csv(RESULTS_PATH, keep_default_na=False, na_values={"p": [""]})
+    empty = {c: [""] for c in ["p", "n_resets_tune", "n_resets_test", "mean_gap_test"]}
+    return pd.read_csv(RESULTS_PATH, keep_default_na=False, na_values=empty)
 
 
 # ---------------------------------------------------------------- predictions (wide)

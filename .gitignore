@@ -13,3 +13,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# too big for GitHub (>100 MB) - regenerate with: python online.py
+outputs/predictions.csv

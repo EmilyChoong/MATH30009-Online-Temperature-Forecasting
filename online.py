@@ -18,10 +18,19 @@ from splines import ncs_basis
 from outputs_io import save_results, save_predictions
 from algorithms.baselines import persistence, yesterday
 from algorithms.arowr import AROWR, GRID as AROWR_GRID
+from algorithms.arcor import ARCOR, GRID as ARCOR_GRID
+from algorithms.rls import RLS, CRRLS, GRID as RLS_GRID, CRRLS_GRID
+from algorithms.aar import AAR, GRID as AAR_GRID
+from algorithms.laser import LASER, GRID as LASER_GRID
 
 # ---------------------------------------------------------------- available methods
 MODELS = {                       # name -> (class with update/predict, parameter grid)
     "AROWR": (AROWR, AROWR_GRID),
+    "ARCOR": (ARCOR, ARCOR_GRID),
+    "RLS":   (RLS, RLS_GRID),
+    "CR-RLS": (CRRLS, CRRLS_GRID),
+    "AAR":   (AAR, AAR_GRID),
+    "LASER": (LASER, LASER_GRID),
 }
 BASELINES = {                    # name -> function(y, k)
     "persistence": persistence,
@@ -29,7 +38,7 @@ BASELINES = {                    # name -> function(y, k)
 }
 
 # ---------------------------------------------------------------- settings
-RUN_MODELS = ["AROWR"]
+RUN_MODELS = ["AROWR", "ARCOR", "RLS", "CR-RLS", "AAR", "LASER"]
 RUN_BASELINES = ["persistence", "yesterday"]
 P_GRID = range(3, 7)             # numbers of basis functions / knots: p = 3..6
 KS = tuple(range(1, 10))         # horizons k = 1..9
@@ -89,7 +98,7 @@ def errors(y, y_hat, mask):
 
 # ---------------------------------------------------------------- tuning
 def tune(model_cls, grid, X, y, tune_mask, ks=KS, metric="mse"):
-    """Generic grid search on the tuning period.
+    """Generic grid search on the tuning period, separately for each horizon k.
 
     Inputs:
         model_cls : the class itself, e.g. AROWR (not an object) - build a FRESH
@@ -99,37 +108,65 @@ def tune(model_cls, grid, X, y, tune_mask, ks=KS, metric="mse"):
                     (try every combination: itertools.product(*grid.values()))
         X, y      : full input matrix and observations
         tune_mask : boolean array, True for tuning hours (the first 20%)
-        ks        : horizons to average over
+        ks        : horizons to tune for
         metric    : "mse" or "mae" (key of errors())
 
     For each combination: run a fresh model on X[tune_mask], y[tune_mask] with
-    run_online, compute the metric for every k, and average over k.
+    run_online (one run gives every k) and compute the metric for every k.
+    For each k, pick the combination with the smallest metric.
 
     Returns:
-        best_params : dict, e.g. {"r": 0.0001} - the combination with the smallest average
-        table       : DataFrame, one row per combination with its average metric
+        best_params : dict {k: params}, e.g. {1: {"r": 1e-05}, 2: {"r": 0.0001}, ...}
+        table       : DataFrame, one row per (k, combination) with its metric
     """
+    Xt, yt = X[tune_mask], y[tune_mask]
     rows = []
     for values in itertools.product(*grid.values()):
         params = dict(zip(grid.keys(), values))
-        model = model_cls(X.shape[1], **params)
-        Xt, yt = X[tune_mask], y[tune_mask]
+        try:
+            model = model_cls(X.shape[1], **params)
+        except ValueError:                       # invalid combination (e.g. LASER needs b < c)
+            continue
         preds = run_online(model, Xt, yt, ks)
-        avg_metric = np.mean([errors(yt, preds[k], np.ones(len(yt), bool))[metric] for k in ks])
-        rows.append({**params, metric: avg_metric})
 
-    table = pd.DataFrame(rows).sort_values(metric)
-    best_params = table.iloc[0].to_dict()
-    del best_params[metric]
+        for k in ks:
+            value = errors(yt, preds[k], np.ones(len(yt), bool))[metric]
+            rows.append({"k": k, **params, metric: value})
+
+    table = pd.DataFrame(rows)
+
+    # Find the best parameter combination independently for each k
+    best_params = {}
+    for k in ks:
+        best_row = table[table["k"] == k].sort_values(metric).iloc[0]
+        best_params[k] = {param: best_row[param] for param in grid.keys()}
+
+    table = table.sort_values(["k", metric])
     return best_params, table
 
 
 # ---------------------------------------------------------------- main
-def score(name, p, params, preds, y, test_mask):
-    """One results row per k for these predictions."""
-    label = ", ".join(f"{a}={b:g}" for a, b in params.items())
-    return [{"algorithm": name, "params": label, "p": p, "k": k,
-             **errors(y, preds[k], test_mask)} for k in preds]
+def score(name, p, best_params, preds, y, test_mask):
+    """One results row per k, labelled with that k's tuned params ({} for baselines)."""
+    rows = []
+    for k in preds:
+        params = best_params.get(k, {})
+        label = ", ".join(f"{a}={b:g}" for a, b in params.items())
+        rows.append({"algorithm": name, "params": label, "p": p, "k": k,
+                     **errors(y, preds[k], test_mask)})
+    return rows
+
+
+def reset_summary(reset_times, n_tune):
+    """Reset counts in the tuning / test periods and the mean gap (hours) between test resets.
+    All NaN for models without covariance resets (reset_times is None)."""
+    if reset_times is None:
+        return {"n_resets_tune": np.nan, "n_resets_test": np.nan, "mean_gap_test": np.nan}
+    t = np.asarray(reset_times)
+    test = t[t >= n_tune]
+    return {"n_resets_tune": int((t < n_tune).sum()),
+            "n_resets_test": len(test),
+            "mean_gap_test": float(np.diff(test).mean()) if len(test) >= 2 else np.nan}
 
 
 if __name__ == "__main__":
@@ -138,6 +175,7 @@ if __name__ == "__main__":
     n_tune = int(TUNE_FRAC * len(y))
     tune_mask = np.arange(len(y)) < n_tune
     test_mask = ~tune_mask
+
     print(f"Tuning period: {s.index[0]} to {s.index[n_tune - 1]} ({n_tune} hours)")
     print(f"Test period:   {s.index[n_tune]} to {s.index[-1]} ({len(y) - n_tune} hours)\n")
 
@@ -146,12 +184,21 @@ if __name__ == "__main__":
         rows, preds_by_p = [], {}
         for p in P_GRID:
             X = features(s, p)
-            params, table = tune(model_cls, grid, X, y, tune_mask)      # tuned separately for each p
-            print(f"{name}, p = {p}: tuning (mean MSE over k = {KS[0]}..{KS[-1]})")
-            print(table.to_string(index=False), f"\n-> chosen {params}\n")
+            best_params, table = tune(model_cls, grid, X, y, tune_mask)   # tuned separately for each p and k
+            print(f"{name}, p = {p}: tuning ({len(table)} rows, best per k below)")
+            print(table.groupby("k").head(1).to_string(index=False), "\n")
 
-            preds_by_p[p] = run_online(model_cls(p, **params), X, y, KS)  # fresh from 1 Jan 2020
-            rows += score(name, p, params, preds_by_p[p], y, test_mask)
+            preds, resets = {}, {}
+            for k in KS:
+                model = model_cls(p, **best_params[k])          # fresh model with k's settings, from 1 Jan 2020
+                preds[k] = run_online(model, X, y, (k,))[k]     # keep the k-hours-ahead forecasts
+                resets[k] = getattr(model, "reset_times", None) # ARCOR only; None for other models
+
+            preds_by_p[p] = preds
+            new_rows = score(name, p, best_params, preds, y, test_mask)
+            for row in new_rows:
+                row.update(reset_summary(resets[row["k"]], n_tune))
+            rows += new_rows
         save_results(rows)
         save_predictions(name, s, n_tune, preds_by_p)
 

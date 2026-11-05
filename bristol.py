@@ -31,7 +31,7 @@ def load_bristol():
     # checks: one reading per hour, in order, no gaps or duplicates
     assert len(s) == N_HOURS, f"expected {N_HOURS} rows, got {len(s)}"
     assert s.index.is_unique and s.index.is_monotonic_increasing
-    assert (np.diff(s.index.asi8) == 3600 * 10**9).all(), "series is not strictly hourly"
+    assert (s.index[1:] - s.index[:-1] == pd.Timedelta(hours=1)).all(), "series is not strictly hourly"
     return s
 
 
