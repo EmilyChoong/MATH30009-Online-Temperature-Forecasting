@@ -8,7 +8,6 @@
 !/outputs/
 !/bristol_data.csv
 !/figures/
-!/outputs/predictions.csv
 
 # never commit caches
 __pycache__/

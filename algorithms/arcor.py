@@ -76,7 +76,7 @@ class ARCOR:
         return Q @ (z / (1 + high * eigenvalues))
 
 
-# parameter grid searched by online.tune (175 combinations)
+# parameter grid searched by online.tune (275 combinations)
 GRID = {
     "r":   [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
     "q":   [1.5, 2, 2.5, 3, 3.5],
