@@ -38,7 +38,7 @@ BASELINES = {                    # name -> function(y, k)
 }
 
 # ---------------------------------------------------------------- settings
-RUN_MODELS = ["AROWR", "ARCOR", "RLS", "CR-RLS", "AAR", "LASER"]
+RUN_MODELS = ["RLS", " CR-RLS", "AROWR", "ARCOR", "AAR", "LASER"]  # which models to run (subset of MODELS.keys())
 RUN_BASELINES = ["persistence", "yesterday"]
 P_GRID = range(3, 7)             # numbers of basis functions / knots: p = 3..6
 KS = tuple(range(1, 10))         # horizons k = 1..9

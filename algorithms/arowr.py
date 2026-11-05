@@ -25,4 +25,4 @@ class AROWR:
 
 
 # parameter grid searched by online.tune (log-spaced)
-GRID = {"r": [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10]}
+GRID = {"r": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2]}

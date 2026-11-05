@@ -78,7 +78,7 @@ class ARCOR:
 
 # parameter grid searched by online.tune (175 combinations)
 GRID = {
-    "r":   [0.001, 0.005, 0.01, 0.1, 1, 10, 100],
+    "r":   [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
     "q":   [1.5, 2, 2.5, 3, 3.5],
     "R_B": [25, 50, 100, 150, 300],
 }
