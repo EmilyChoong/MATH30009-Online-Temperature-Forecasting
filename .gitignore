@@ -3,7 +3,7 @@
 !/.gitignore
 !/README.md
 !/*.py
-!/01_check.ipynb
+!/notebooks/
 !/algorithms/
 !/outputs/
 !/bristol_data.csv
