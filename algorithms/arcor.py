@@ -76,9 +76,12 @@ class ARCOR:
         return Q @ (z / (1 + high * eigenvalues))
 
 
-# parameter grid searched by online.tune (275 combinations)
+# parameter grid searched by online.tune (486 combinations).
+# Extended after checking grid edges: for short k the tuning MSE is flat for r <= 1e-4
+# and for every q (ARCOR resets every hour); for long k it is flat for q <= 1.01.
+# R_B = 25 is an interior optimum (15, 20 and 30 are all worse).
 GRID = {
-    "r":   [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
-    "q":   [1.5, 2, 2.5, 3, 3.5],
-    "R_B": [25, 50, 100, 150, 300],
+    "r":   [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
+    "q":   [1.001, 1.01, 1.05, 1.1, 1.25, 1.5, 2, 2.5, 3],
+    "R_B": [15, 20, 25, 30, 50, 100],
 }

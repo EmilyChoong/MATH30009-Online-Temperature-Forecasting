@@ -35,8 +35,9 @@ class LASER:
 
 
 # parameter grid searched by online.tune (combinations with b >= c are skipped).
-# Widened from the original script, whose best p = 5, 6 values sat on the grid's lower edge.
+# Extended after checking grid edges: for short k the tuning MSE is flat for c <= 1e-4
+# (LASER's full-forgetting limit), so going below c = 1e-6 changes nothing.
 GRID = {
-    "b": [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
-    "c": [1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4],
+    "b": [1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
+    "c": [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4],
 }
