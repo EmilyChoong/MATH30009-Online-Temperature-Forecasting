@@ -38,8 +38,9 @@ BASELINES = {                    # name -> function(y, k)
 }
 
 # ---------------------------------------------------------------- settings
-RUN_MODELS = ["RLS", "CR-RLS", "AROWR", "ARCOR", "AAR", "LASER"]  # which models to run (subset of MODELS.keys())
-RUN_BASELINES = ["persistence", "yesterday"]
+RUN_MODELS = ["ARCOR"]
+# ["AROWR", "ARCOR", "RLS", "CR-RLS", "AAR", "LASER"]  # which models to run (subset of MODELS.keys())
+RUN_BASELINES = [] # ["persistence", "yesterday"]
 P_GRID = range(3, 9)             # numbers of basis functions / knots: p = 3..7
 KS = tuple(range(1, 13))         # horizons k = 1..12
 TUNE_FRAC = 0.2                  # first 20% of hours used for tuning
@@ -138,7 +139,10 @@ def tune(model_cls, grid, X, y, tune_mask, ks=KS, metric="mse"):
     # Find the best parameter combination independently for each k
     best_params = {}
     for k in ks:
-        best_row = table[table["k"] == k].sort_values(metric).iloc[0]
+        best_row = (table[table["k"] == k]
+                    .assign(_m=lambda d: d[metric].round(10))
+                    .sort_values("_m", kind="stable")      # ties keep grid order
+                    .iloc[0])
         best_params[k] = {param: best_row[param] for param in grid.keys()}
 
     table = table.sort_values(["k", metric])
